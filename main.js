@@ -4,8 +4,14 @@ import paragraph from './paragraph'
 document.querySelector('#app').innerHTML = paragraph
 
 function injectMarkWords(selector, callback) {
-  // const selectorElement = document.querySelector(selector)
-  window.addEventListener('mouseup', () => {
+  const target = document.querySelector(selector)
+  if (!target) {
+    throw new Error(`Error: ${selector} element is not exist.`)
+  }
+
+  window.addEventListener('mouseup', e => {
+    if (!e.path.includes(target)) return
+
     const flag = 'mark'
     const selObj = document.getSelection()
 
@@ -14,7 +20,7 @@ function injectMarkWords(selector, callback) {
 
     const { startContainer, endContainer } = selObj.getRangeAt(0)
 
-    // whether select start point & end point in a same text node.
+    // whether select start point & end point in the same text-node.
     if (startContainer !== endContainer || startContainer.nodeName !== '#text') return
 
     // nested mark is not allowed
@@ -22,7 +28,6 @@ function injectMarkWords(selector, callback) {
 
     const { anchorOffset, focusOffset, anchorNode } = selObj
     const [start, end] = [anchorOffset, focusOffset].sort()
-
     const { textContent } = anchorNode
 
     const prevStr = textContent.slice(0, start)
@@ -41,10 +46,10 @@ function injectMarkWords(selector, callback) {
     fragment.append(prevTextNode, markedElementNode, nextTextNode)
 
     anchorNode.replaceWith(fragment)
-    console.log(selObj.getRangeAt(0).commonAncestorContainer)
+    callback(markedElementNode)
   })
 }
 
-injectMarkWords('#app', () => {
-  console.log()
+injectMarkWords('#app', markedElementNode => {
+  console.log(markedElementNode)
 })
