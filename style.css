@@ -24,3 +24,8 @@ p::selection {
   background-color: green;
   color: #fff;
 }
+
+span[data-mark] {
+  background-color: yellow;
+  color: #000;
+}
