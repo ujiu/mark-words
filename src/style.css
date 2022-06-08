@@ -20,12 +20,12 @@ p {
   font-family: SimSun;
   text-indent: 2em;
 }
-p::selection {
-  background-color: green;
+*::selection {
+  background-color: purple;
   color: #fff;
 }
 
-span[data-mark] {
+[data-mark] {
   background-color: yellow;
   color: #000;
 }
