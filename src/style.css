@@ -8,9 +8,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
   margin: 0 auto;
-  max-width: 800px;
+  max-width: 1000px;
   margin-top: 100px;
-  padding: 0 50px;
 }
 
 p {
@@ -28,4 +27,11 @@ p {
 [data-mark] {
   background-color: yellow;
   color: #000;
+}
+
+input {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 33.33%;
+  height: 30px;
 }

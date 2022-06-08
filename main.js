@@ -2,8 +2,18 @@ import './src/style.css'
 import paragraph from './src/paragraph'
 import injectMarkWords from './src/injectMarkWords'
 
-document.querySelector('#app').innerHTML = paragraph
+const root = document.querySelector('#app')
+root.innerHTML = paragraph
 
 injectMarkWords('#app', textNode => {
-  console.log(textNode)
+  createInput(textNode)
 })
+
+function createInput(textNode) {
+  const input = document.createElement('input')
+  input.value = textNode.data
+  input.oninput = e => {
+    textNode.data = e.target.value
+  }
+  root.appendChild(input)
+}
