@@ -30,7 +30,6 @@ function injectMarkWords(selector, callback) {
 
     const selStr = textContent.slice(start, end)
     const markedElementNode = document.createElement('span')
-    markedElementNode.classList.add(flag)
     markedElementNode.dataset[flag] = ''
     markedElementNode.innerText = selStr
 
