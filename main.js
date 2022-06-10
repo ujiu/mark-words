@@ -5,7 +5,7 @@ import injectMarkWords from './src/injectMarkWords'
 const root = document.querySelector('#app')
 root.innerHTML = paragraph
 
-injectMarkWords('#app', textNode => {
+injectMarkWords('#app', ([textNode]) => {
   createInput(textNode)
 })
 

@@ -1,3 +1,8 @@
+/**
+ * 一个划词方法
+ * @param {string} selector css selector
+ * @param {function} callback expose mark element to outsied.
+ */
 function injectMarkWords(selector, callback) {
   const target = document.querySelector(selector)
   if (!target) {
@@ -7,7 +12,7 @@ function injectMarkWords(selector, callback) {
   window.addEventListener('mouseup', e => {
     if (!e.path.includes(target)) return
 
-    const flag = 'mark'
+    const mark = 'mark'
     const selObj = document.getSelection()
 
     // if not select anything. return.
@@ -19,7 +24,11 @@ function injectMarkWords(selector, callback) {
     if (startContainer !== endContainer || startContainer.nodeName !== '#text') return
 
     // nested mark is not allowed
-    if (flag in startContainer.parentNode.dataset) return
+    if (mark in startContainer.parentNode.dataset) return
+
+    if (selObj.isCollapsed) {
+      console.log('鼠标重叠')
+    }
 
     const { anchorOffset, focusOffset, anchorNode } = selObj
     const [start, end] = [anchorOffset, focusOffset].sort((a, b) => a - b)
@@ -30,7 +39,7 @@ function injectMarkWords(selector, callback) {
 
     const selStr = textContent.slice(start, end)
     const markedElementNode = document.createElement('span')
-    markedElementNode.dataset[flag] = ''
+    markedElementNode.dataset[mark] = ''
     markedElementNode.innerText = selStr
 
     const nextStr = textContent.slice(end)
@@ -40,7 +49,8 @@ function injectMarkWords(selector, callback) {
     fragment.append(prevTextNode, markedElementNode, nextTextNode)
 
     anchorNode.replaceWith(fragment)
-    callback(markedElementNode.firstChild)
+    const mode = 'add' // delete modify merge
+    callback([markedElementNode.firstChild], mode)
   })
 }
 
