@@ -1,51 +1,67 @@
+export const modeDict = {
+  // delete: 0,
+  add: 1,
+  modify: 2,
+  merge: 3,
+  // 0: 'delete',
+  1: 'add',
+  2: 'modify',
+  3: 'merge',
+}
+
 /**
  * 一个划词方法
  * @param {string} selector css selector
  * @param {function} callback expose mark element to outsied.
  */
 function injectMarkWords(selector, callback) {
-  const target = document.querySelector(selector)
-  if (!target) {
-    throw new Error(`Error: ${selector} element is not exist.`)
-  }
+  const MARK = 'mark'
+  const markMap = {}
+  ;[...document.querySelectorAll(`[data-${MARK}]`)].forEach(item => {
+    markMap[item.dataset[MARK]] = item.firstChild
+  })
 
-  const modeDict = {
-    delete: 0,
-    add: 1,
-    modify: 2,
-    merge: 3,
-  }
+  console.log(markMap)
+
+  // ---------------
+
+  const target = document.querySelector(selector)
+  if (!target) throw new Error(`Error: ${selector} element is not exist.`)
+
   window.addEventListener('mouseup', e => {
+    // 选择器不存在时，返回
     if (!e.path.includes(target)) return
 
-    const mark = 'mark'
     const selObj = document.getSelection()
-    const { startContainer, endContainer } = selObj.getRangeAt(0)
-    const isContainMark =
-      mark in startContainer.parentNode.dataset || mark in endContainer.parentNode.dataset
 
-    // delete
-    if (isContainMark && selObj.isCollapsed) {
-      callback([startContainer], modeDict.delete)
+    // 不存在选区时返回
+    if (selObj.isCollapsed || selObj.type !== 'Range') return
+
+    // 开始或结束节点类型不是文本节点时，返回
+    const rangeObj = selObj.getRangeAt(0)
+    const { startContainer, endContainer } = rangeObj
+    if (startContainer.nodeName !== '#text' || endContainer.nodeName !== '#text') return
+
+    // 选区内包含标记节点时，返回
+    const rangeFrag = rangeObj.cloneContents()
+    const markNodes = rangeFrag.querySelectorAll(`[data-${MARK}]`)
+    if (markNodes.length > 1) return
+
+    // 内部 mark 节点只有一个时，走修改逻辑
+    if (markNodes.length === 1) {
+      const { endOffset, startOffset } = rangeObj
+      const [startContent, endContent] = [startContainer.textContent, endContainer.textContent]
+      console.log(startContainer, endContainer, startOffset, endOffset)
+
+      // markMap[markNodes[0].dataset[MARK]].data = `${startContent.slice(startOffset)}${
+      //   markNodes[0].textContent
+      // }${endContent.slice(0, endOffset)}`
+
+      // startContainer.data = startContent.slice(0, startOffset)
+      // endContainer.data = endContent.slice(endOffset)
+      // selObj.removeRange(rangeObj)
       return
     }
-
-    // if not select anything. return.
-    if (selObj.type !== 'Range') return
-
-    console.log(selObj, selObj.getRangeAt(0))
-
-    // whether select start point & end point in the same text-node.
-    if (startContainer !== endContainer) {
-      if (startContainer.nodeName !== '#text') {
-        // alert('不能跨元素选择')
-        return
-      }
-    }
-    // console.log(startContainer, endContainer)
-
-    // nested mark is not allowed
-    if (mark in startContainer.parentNode.dataset) return
 
     // add
     const { anchorOffset, focusOffset, anchorNode } = selObj
@@ -53,21 +69,15 @@ function injectMarkWords(selector, callback) {
     const { textContent } = anchorNode
 
     const prevStr = textContent.slice(0, start)
-    const prevTextNode = document.createTextNode(prevStr)
-
     const selStr = textContent.slice(start, end)
-    const markedElementNode = document.createElement('span')
-    markedElementNode.dataset[mark] = ''
-    markedElementNode.innerText = selStr
-
     const nextStr = textContent.slice(end)
-    const nextTextNode = document.createTextNode(nextStr)
+    const fragment = rangeObj.createContextualFragment(
+      `${prevStr}<span data-${MARK}>${selStr}</span>${nextStr}`,
+    )
 
-    const fragment = document.createDocumentFragment()
-    fragment.append(prevTextNode, markedElementNode, nextTextNode)
-
-    // anchorNode.replaceWith(fragment)
-    callback([markedElementNode.firstChild], modeDict.add)
+    anchorNode.replaceWith(fragment)
+    // add
+    callback(null, modeDict.add)
   })
 }
 
