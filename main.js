@@ -5,8 +5,11 @@ import injectMarkWords from './src/injectMarkWords'
 const root = document.querySelector('#app')
 root.innerHTML = paragraph
 
-injectMarkWords('#app', ([textNode]) => {
-  createInput(textNode)
+injectMarkWords('#app', ([textNode], mode) => {
+  console.log(textNode, mode)
+  if (mode === 1) {
+    createInput(textNode)
+  }
 })
 
 function createInput(textNode) {

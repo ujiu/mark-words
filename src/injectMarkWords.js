@@ -9,27 +9,45 @@ function injectMarkWords(selector, callback) {
     throw new Error(`Error: ${selector} element is not exist.`)
   }
 
+  const modeDict = {
+    delete: 0,
+    add: 1,
+    modify: 2,
+    merge: 3,
+  }
   window.addEventListener('mouseup', e => {
     if (!e.path.includes(target)) return
 
     const mark = 'mark'
     const selObj = document.getSelection()
+    const { startContainer, endContainer } = selObj.getRangeAt(0)
+    const isContainMark =
+      mark in startContainer.parentNode.dataset || mark in endContainer.parentNode.dataset
+
+    // delete
+    if (isContainMark && selObj.isCollapsed) {
+      callback([startContainer], modeDict.delete)
+      return
+    }
 
     // if not select anything. return.
     if (selObj.type !== 'Range') return
 
-    const { startContainer, endContainer } = selObj.getRangeAt(0)
+    console.log(selObj, selObj.getRangeAt(0))
 
     // whether select start point & end point in the same text-node.
-    if (startContainer !== endContainer || startContainer.nodeName !== '#text') return
+    if (startContainer !== endContainer) {
+      if (startContainer.nodeName !== '#text') {
+        // alert('不能跨元素选择')
+        return
+      }
+    }
+    // console.log(startContainer, endContainer)
 
     // nested mark is not allowed
     if (mark in startContainer.parentNode.dataset) return
 
-    if (selObj.isCollapsed) {
-      console.log('鼠标重叠')
-    }
-
+    // add
     const { anchorOffset, focusOffset, anchorNode } = selObj
     const [start, end] = [anchorOffset, focusOffset].sort((a, b) => a - b)
     const { textContent } = anchorNode
@@ -48,9 +66,8 @@ function injectMarkWords(selector, callback) {
     const fragment = document.createDocumentFragment()
     fragment.append(prevTextNode, markedElementNode, nextTextNode)
 
-    anchorNode.replaceWith(fragment)
-    const mode = 'add' // delete modify merge
-    callback([markedElementNode.firstChild], mode)
+    // anchorNode.replaceWith(fragment)
+    callback([markedElementNode.firstChild], modeDict.add)
   })
 }
 
