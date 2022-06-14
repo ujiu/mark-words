@@ -91,18 +91,10 @@ export function injectMarkWords(selector, callback) {
     if (isSameText && MARK in commonContainer.parentElement.dataset) {
       let { previousSibling: prevText, nextSibling: nextText } = commonContainer.parentElement
       const markNode = rangeObj.commonAncestorContainer.parentNode
-      // const temp = {
-      //   data: '',
-      //   textContent: '',
-      //   nodeName: '#text',
-      // }
-
-      // if (!prevText) prevText = temp
-      // if (!nextText) nextText = temp
 
       let fragment = null
 
-      // 前后置节点都为存在 null 时
+      // 前后置节点存在 null 时
       if (!prevText || !nextText) {
         fragment = rangeObj.createContextualFragment(
           `${prevStr}<span data-${MARK}="${markNode.dataset[MARK]}">${selStr}</span>${nextStr}`,
