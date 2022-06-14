@@ -1,20 +1,10 @@
-export const modeDict = {
-  // delete: 0,
-  add: 1,
-  modify: 2,
-  merge: 3,
-  // 0: 'delete',
-  1: 'add',
-  2: 'modify',
-  3: 'merge',
-}
+export const modeDict = { add: 1, modify: 2, 1: 'add', 2: 'modify' }
 
-function updateMap(mark) {
+function getMarkMap(mark) {
   const temp = {}
   ;[...document.querySelectorAll(`[data-${mark}]`)].forEach(item => {
     temp[item.dataset[mark]] = item.firstChild
   })
-  console.log(temp)
   return temp
 }
 
@@ -25,40 +15,43 @@ function updateMap(mark) {
  */
 function injectMarkWords(selector, callback) {
   const MARK = 'mark'
-  let markMap = {}
-  ;[...document.querySelectorAll(`[data-${MARK}]`)].forEach(item => {
-    markMap[item.dataset[MARK]] = item.firstChild
-  })
-
-  console.log(markMap)
-
-  // ---------------
+  let markMap = getMarkMap(MARK)
 
   const target = document.querySelector(selector)
   if (!target) throw new Error(`Error: ${selector} element is not exist.`)
 
   window.addEventListener('mouseup', e => {
-    // 选择器不存在时，返回
+    // 选取在选择器区域外时, 排除
     if (!e.path.includes(target)) return
 
     const selObj = document.getSelection()
 
-    // 不存在选区时返回
+    // 不存在选区或选区重叠时, 排除
     if (selObj.isCollapsed || selObj.type !== 'Range') return
 
-    // 开始或结束节点类型不是文本节点时，返回
     const rangeObj = selObj.getRangeAt(0)
     const { startContainer, endContainer } = rangeObj
+
+    // 开始或结束节点类型不是文本节点时, 排除
     if (startContainer.nodeName !== '#text' || endContainer.nodeName !== '#text') return
 
-    // 选区内包含多个标记节点时，返回
     const rangeFrag = rangeObj.cloneContents()
-    console.log(rangeFrag)
     const markNodes = rangeFrag.querySelectorAll(`[data-${MARK}]`)
+
+    // 选区内包含多个标记节点时, 排除
     if (markNodes.length > 1) return
 
-    // 内部 mark 节点只有一个时，走修改逻辑
+    const commonParent = rangeObj.commonAncestorContainer
+    const [startParent, endParent] = [startContainer.parentNode, endContainer.parentNode]
+    const isSameText = startContainer === endContainer
+    const isCrossSelect = !isSameText && commonParent !== startParent && commonParent !== endParent
+
+    // 跨段选择时，排除
+    if (isCrossSelect) return
+
     const { endOffset, startOffset } = rangeObj
+
+    // 内部 mark 节点只有一个时，走修改逻辑
     if (markNodes.length === 1) {
       const innerMarkNode = markNodes[0]
       const innerMarkText = markMap[innerMarkNode.dataset[MARK]]
@@ -93,41 +86,51 @@ function injectMarkWords(selector, callback) {
       }
     }
 
-    // 起始点都在 mark node 内时，走修改逻辑
     const { anchorOffset, focusOffset, anchorNode } = selObj
     const [start, end] = [anchorOffset, focusOffset].sort((a, b) => a - b)
     const { textContent } = anchorNode
-    if (startContainer === endContainer && MARK in startContainer.parentElement.dataset) {
-      console.log(startContainer, endContainer, startOffset, endOffset)
-      const prevText = rangeObj.commonAncestorContainer.parentElement.previousSibling
-      const prevStr = textContent.slice(0, start)
-      prevText.data = prevText.textContent + prevStr
-
-      const nextText = rangeObj.commonAncestorContainer.parentElement.nextSibling
-      const nextStr = textContent.slice(end)
-      nextText.data = nextStr + nextText.textContent
-
-      const selStr = textContent.slice(start, end)
-      rangeObj.commonAncestorContainer.data = selStr
-      selObj.removeRange(rangeObj)
-      return
-    }
-
-    if (startContainer !== endContainer) return
-
-    // add
 
     const prevStr = textContent.slice(0, start)
     const selStr = textContent.slice(start, end)
     const nextStr = textContent.slice(end)
+
+    // 起始点都在 mark node 内时，走修改逻辑
+    if (isSameText && MARK in startContainer.parentElement.dataset) {
+      const commonContainer = rangeObj.commonAncestorContainer
+      const { previousSibling: prevText, nextSibling: nextText } = commonContainer.parentElement
+
+      // mark node 左右相邻节点都是文本节点时
+      if (prevText.nodeName === '#text' && nextText.nodeName === '#text') {
+        prevText.data = prevText.textContent + prevStr
+        nextText.data = nextStr + nextText.textContent
+      }
+
+      // 前置节点非 Text
+      if (prevText.nodeName !== '#text') {
+        prevText.firstChild.data = prevText.firstChild.data + prevStr
+        nextText.data = nextStr + nextText.textContent
+      }
+
+      // 后置节点非 Text
+      if (nextText.nodeName !== '#text') {
+        prevText.data = prevText.textContent + prevStr
+        nextText.firstChild.data = nextStr + nextText.firstChild.data
+      }
+
+      commonContainer.data = selStr
+      selObj.removeRange(rangeObj)
+      return
+    }
+
+    // 新增
     const fragment = rangeObj.createContextualFragment(
       `${prevStr}<span data-${MARK}="${Date.now()}">${selStr}</span>${nextStr}`,
     )
-
     anchorNode.replaceWith(fragment)
-    markMap = updateMap(MARK)
+
+    markMap = getMarkMap(MARK)
     // add
-    callback(null, modeDict.add)
+    // callback(null, modeDict.add)
   })
 }
 
