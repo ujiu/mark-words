@@ -89,20 +89,35 @@ export function injectMarkWords(selector, callback) {
 
     // 起始点都在 mark node 内时，走修改逻辑
     if (isSameText && MARK in commonContainer.parentElement.dataset) {
-      const { previousSibling: prevText, nextSibling: nextText } = commonContainer.parentElement
+      let { previousSibling: prevText, nextSibling: nextText } = commonContainer.parentElement
       const markNode = rangeObj.commonAncestorContainer.parentNode
+      // const temp = {
+      //   data: '',
+      //   textContent: '',
+      //   nodeName: '#text',
+      // }
 
-      // mark node 左右相邻节点都是文本节点时
-      if (prevText.nodeName === '#text' && nextText.nodeName === '#text') {
+      // if (!prevText) prevText = temp
+      // if (!nextText) nextText = temp
+
+      let fragment = null
+
+      // 前后置节点都为存在 null 时
+      if (!prevText || !nextText) {
+        fragment = rangeObj.createContextualFragment(
+          `${prevStr}<span data-${MARK}="${markNode.dataset[MARK]}">${selStr}</span>${nextStr}`,
+        )
+      }
+
+      // mark node 前后置节点都是文本节点时
+      else if (prevText.nodeName === '#text' && nextText.nodeName === '#text') {
         prevText.data = prevText.textContent + prevStr
         commonContainer.data = selStr
         nextText.data = nextStr + nextText.textContent
       }
 
-      let fragment = null
-
       // 前置节点非 Text
-      if (prevText.nodeName !== '#text') {
+      else if (prevText.nodeName !== '#text') {
         nextText.data = nextStr + nextText.textContent
         fragment = rangeObj.createContextualFragment(
           `${prevStr}<span data-${MARK}="${markNode.dataset[MARK]}">${selStr}</span>`,
@@ -110,7 +125,7 @@ export function injectMarkWords(selector, callback) {
       }
 
       // 后置节点非 Text
-      if (nextText.nodeName !== '#text') {
+      else if (nextText.nodeName !== '#text') {
         prevText.data = prevText.textContent + prevStr
         fragment = rangeObj.createContextualFragment(
           `<span data-${MARK}="${markNode.dataset[MARK]}">${selStr}</span>${nextStr}`,
@@ -118,7 +133,7 @@ export function injectMarkWords(selector, callback) {
       }
 
       // 前置后置节点皆非 Text
-      if (prevText.nodeName !== '#text' && nextText.nodeName !== '#text') {
+      else if (prevText.nodeName !== '#text' && nextText.nodeName !== '#text') {
         fragment = rangeObj.createContextualFragment(
           `${prevStr}<span data-${MARK}="${markNode.dataset[MARK]}">${selStr}</span>${nextStr}`,
         )
