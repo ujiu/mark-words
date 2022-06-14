@@ -1,19 +1,11 @@
 export const modeDict = { add: 1, modify: 2, 1: 'add', 2: 'modify' }
 
-function getMarkMap(mark) {
-  const temp = {}
-  ;[...document.querySelectorAll(`[data-${mark}]`)].forEach(item => {
-    temp[item.dataset[mark]] = item.firstChild
-  })
-  return temp
-}
-
 /**
  * 一个划词方法
  * @param {string} selector css selector
  * @param {function} callback expose mark element to outsied.
  */
-function injectMarkWords(selector, callback) {
+export function injectMarkWords(selector, callback) {
   const MARK = 'mark'
   let markMap = getMarkMap(MARK)
 
@@ -65,25 +57,25 @@ function injectMarkWords(selector, callback) {
 
         startContainer.data = startContent.slice(0, startOffset)
         endContainer.data = endContent.slice(endOffset)
-        selObj.removeRange(rangeObj)
-        return
       }
 
       // 情况2: range 起点是 mark node
       if (startContainer === innerMarkText) {
         innerMarkText.data = `${innerMarkText.data}${endContent.slice(0, endOffset)}`
         endContainer.data = endContent.slice(endOffset)
-        selObj.removeRange(rangeObj)
-        return
       }
 
       // 情况3: range 终点是 mark node
       if (endContainer === innerMarkText) {
         innerMarkText.data = `${startContent.slice(startOffset)}${innerMarkText.data}`
         startContainer.data = startContent.slice(0, startOffset)
-        selObj.removeRange(rangeObj)
-        return
       }
+
+      selObj.removeRange(rangeObj)
+      markMap = getMarkMap(MARK)
+
+      callback(modeDict.modify, markMap)
+      return
     }
 
     const { anchorOffset, focusOffset, anchorNode } = selObj
@@ -136,20 +128,25 @@ function injectMarkWords(selector, callback) {
 
       selObj.removeRange(rangeObj)
       markMap = getMarkMap(MARK)
+
+      callback(modeDict.modify, markMap)
       return
     }
 
-    // 新增
     const fragment = rangeObj.createContextualFragment(
       `${prevStr}<span data-${MARK}="${Date.now()}">${selStr}</span>${nextStr}`,
     )
     anchorNode.replaceWith(fragment)
 
     markMap = getMarkMap(MARK)
-
-    // add
-    // callback(null, modeDict.add)
+    callback(modeDict.add, markMap)
   })
 }
 
-export default injectMarkWords
+function getMarkMap(mark) {
+  const temp = {}
+  ;[...document.querySelectorAll(`[data-${mark}]`)].forEach(item => {
+    temp[item.dataset[mark]] = item.firstChild
+  })
+  return temp
+}

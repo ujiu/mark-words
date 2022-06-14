@@ -1,13 +1,12 @@
 import './src/style.css'
 import paragraph from './src/paragraph'
-import { modeDict } from './src/injectMarkWords'
-import injectMarkWords from './src/injectMarkWords'
+import { modeDict, injectMarkWords } from './src/injectMarkWords'
 
 const root = document.querySelector('#app')
 root.innerHTML = paragraph
 
-injectMarkWords('#app', (_, mode) => {
-  // alert(modeDict[mode])
+injectMarkWords('#app', (markMap, mode) => {
+  console.log(markMap, mode)
 })
 
 function createInput(textNode) {
