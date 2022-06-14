@@ -9,6 +9,15 @@ export const modeDict = {
   3: 'merge',
 }
 
+function updateMap(mark) {
+  const temp = {}
+  ;[...document.querySelectorAll(`[data-${mark}]`)].forEach(item => {
+    temp[item.dataset[mark]] = item.firstChild
+  })
+  console.log(temp)
+  return temp
+}
+
 /**
  * 一个划词方法
  * @param {string} selector css selector
@@ -16,7 +25,7 @@ export const modeDict = {
  */
 function injectMarkWords(selector, callback) {
   const MARK = 'mark'
-  const markMap = {}
+  let markMap = {}
   ;[...document.querySelectorAll(`[data-${MARK}]`)].forEach(item => {
     markMap[item.dataset[MARK]] = item.firstChild
   })
@@ -42,40 +51,81 @@ function injectMarkWords(selector, callback) {
     const { startContainer, endContainer } = rangeObj
     if (startContainer.nodeName !== '#text' || endContainer.nodeName !== '#text') return
 
-    // 选区内包含标记节点时，返回
+    // 选区内包含多个标记节点时，返回
     const rangeFrag = rangeObj.cloneContents()
+    console.log(rangeFrag)
     const markNodes = rangeFrag.querySelectorAll(`[data-${MARK}]`)
     if (markNodes.length > 1) return
 
     // 内部 mark 节点只有一个时，走修改逻辑
+    const { endOffset, startOffset } = rangeObj
     if (markNodes.length === 1) {
-      const { endOffset, startOffset } = rangeObj
+      const innerMarkNode = markNodes[0]
+      const innerMarkText = markMap[innerMarkNode.dataset[MARK]]
       const [startContent, endContent] = [startContainer.textContent, endContainer.textContent]
-      console.log(startContainer, endContainer, startOffset, endOffset)
 
-      // markMap[markNodes[0].dataset[MARK]].data = `${startContent.slice(startOffset)}${
-      //   markNodes[0].textContent
-      // }${endContent.slice(0, endOffset)}`
+      // 情况1: range 起始点都不在 mark node 中
+      if (startContainer !== innerMarkText && endContainer !== innerMarkText) {
+        innerMarkText.data = `${startContent.slice(startOffset)}${
+          innerMarkText.data
+        }${endContent.slice(0, endOffset)}`
 
-      // startContainer.data = startContent.slice(0, startOffset)
-      // endContainer.data = endContent.slice(endOffset)
-      // selObj.removeRange(rangeObj)
-      return
+        startContainer.data = startContent.slice(0, startOffset)
+        endContainer.data = endContent.slice(endOffset)
+        selObj.removeRange(rangeObj)
+        return
+      }
+
+      // 情况2: range 起点是 mark node
+      if (startContainer === innerMarkText) {
+        innerMarkText.data = `${innerMarkText.data}${endContent.slice(0, endOffset)}`
+        endContainer.data = endContent.slice(endOffset)
+        selObj.removeRange(rangeObj)
+        return
+      }
+
+      // 情况3: range 终点是 mark node
+      if (endContainer === innerMarkText) {
+        innerMarkText.data = `${startContent.slice(startOffset)}${innerMarkText.data}`
+        startContainer.data = startContent.slice(0, startOffset)
+        selObj.removeRange(rangeObj)
+        return
+      }
     }
 
-    // add
+    // 起始点都在 mark node 内时，走修改逻辑
     const { anchorOffset, focusOffset, anchorNode } = selObj
     const [start, end] = [anchorOffset, focusOffset].sort((a, b) => a - b)
     const { textContent } = anchorNode
+    if (startContainer === endContainer && MARK in startContainer.parentElement.dataset) {
+      console.log(startContainer, endContainer, startOffset, endOffset)
+      const prevText = rangeObj.commonAncestorContainer.parentElement.previousSibling
+      const prevStr = textContent.slice(0, start)
+      prevText.data = prevText.textContent + prevStr
+
+      const nextText = rangeObj.commonAncestorContainer.parentElement.nextSibling
+      const nextStr = textContent.slice(end)
+      nextText.data = nextStr + nextText.textContent
+
+      const selStr = textContent.slice(start, end)
+      rangeObj.commonAncestorContainer.data = selStr
+      selObj.removeRange(rangeObj)
+      return
+    }
+
+    if (startContainer !== endContainer) return
+
+    // add
 
     const prevStr = textContent.slice(0, start)
     const selStr = textContent.slice(start, end)
     const nextStr = textContent.slice(end)
     const fragment = rangeObj.createContextualFragment(
-      `${prevStr}<span data-${MARK}>${selStr}</span>${nextStr}`,
+      `${prevStr}<span data-${MARK}="${Date.now()}">${selStr}</span>${nextStr}`,
     )
 
     anchorNode.replaceWith(fragment)
+    markMap = updateMap(MARK)
     // add
     callback(null, modeDict.add)
   })
