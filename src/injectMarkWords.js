@@ -93,32 +93,49 @@ function injectMarkWords(selector, callback) {
     const prevStr = textContent.slice(0, start)
     const selStr = textContent.slice(start, end)
     const nextStr = textContent.slice(end)
+    const commonContainer = rangeObj.commonAncestorContainer
 
     // 起始点都在 mark node 内时，走修改逻辑
-    if (isSameText && MARK in startContainer.parentElement.dataset) {
-      const commonContainer = rangeObj.commonAncestorContainer
+    if (isSameText && MARK in commonContainer.parentElement.dataset) {
       const { previousSibling: prevText, nextSibling: nextText } = commonContainer.parentElement
+      const markNode = rangeObj.commonAncestorContainer.parentNode
 
       // mark node 左右相邻节点都是文本节点时
       if (prevText.nodeName === '#text' && nextText.nodeName === '#text') {
         prevText.data = prevText.textContent + prevStr
+        commonContainer.data = selStr
         nextText.data = nextStr + nextText.textContent
       }
 
+      let fragment = null
+
       // 前置节点非 Text
       if (prevText.nodeName !== '#text') {
-        prevText.firstChild.data = prevText.firstChild.data + prevStr
         nextText.data = nextStr + nextText.textContent
+        fragment = rangeObj.createContextualFragment(
+          `${prevStr}<span data-${MARK}="${markNode.dataset[MARK]}">${selStr}</span>`,
+        )
       }
 
       // 后置节点非 Text
       if (nextText.nodeName !== '#text') {
         prevText.data = prevText.textContent + prevStr
-        nextText.firstChild.data = nextStr + nextText.firstChild.data
+        fragment = rangeObj.createContextualFragment(
+          `<span data-${MARK}="${markNode.dataset[MARK]}">${selStr}</span>${nextStr}`,
+        )
       }
 
-      commonContainer.data = selStr
+      // 前置后置节点皆非 Text
+      if (prevText.nodeName !== '#text' && nextText.nodeName !== '#text') {
+        fragment = rangeObj.createContextualFragment(
+          `${prevStr}<span data-${MARK}="${markNode.dataset[MARK]}">${selStr}</span>${nextStr}`,
+        )
+      }
+
+      if (fragment) markNode.replaceWith(fragment)
+
       selObj.removeRange(rangeObj)
+      markMap = getMarkMap(MARK)
       return
     }
 
@@ -129,6 +146,7 @@ function injectMarkWords(selector, callback) {
     anchorNode.replaceWith(fragment)
 
     markMap = getMarkMap(MARK)
+
     // add
     // callback(null, modeDict.add)
   })
